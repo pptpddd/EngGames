@@ -1,0 +1,982 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>動物救援隊</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: one-screen game. Header bar, optional word bar, a 5x9 sky "drop zone" with a dashed warning line, animals or letters as rounded tiles. Single bright daytime look on purpose. */
+:root{
+  --sky1:#bfe2f3;
+  --sky2:#eef6e4;
+  --ink:#22323b;
+  --muted:#5b6a71;
+  --accent:#ee7a1f;
+  --accentDark:#b9580c;
+  --leaf:#3f8f55;
+  --leafDark:#2b6a3d;
+  --plum:#6a5acd;
+  --plumDark:#4b3fa0;
+  --card:#ffffff;
+  --dirt:#c9a37c;
+  --hi:#ffe6c7;
+  --shade:rgba(34,50,59,.18);
+  --scrim:rgba(34,50,59,.55);
+  --font: ui-rounded, "SF Pro Rounded", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --cell:60px;
+  color-scheme:light;
+}
+html,body{height:100%}
+body{
+  margin:0;background:var(--sky2);color:var(--ink);font-family:var(--font);
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+  overflow:hidden;-webkit-user-select:none;user-select:none;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+}
+#app{height:100%;max-width:560px;margin:0 auto}
+.screen{height:100%;display:flex;flex-direction:column}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;touch-action:manipulation}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+
+/* home */
+#home{align-items:center;justify-content:center;gap:16px;text-align:center}
+.logo{font-size:54px;letter-spacing:6px;line-height:1}
+h1{font-size:40px;margin:0;font-weight:800;letter-spacing:.06em;text-wrap:balance}
+.lead{color:var(--muted);font-size:17px;line-height:1.7;margin:0;max-width:22em}
+.modes{display:flex;flex-direction:column;gap:14px;align-items:stretch;width:min(100%,300px)}
+.big{background:var(--accent);color:#fff;font-size:23px;font-weight:800;padding:15px 30px;border-radius:999px;box-shadow:0 6px 0 var(--accentDark);letter-spacing:.06em}
+.big:active{transform:translateY(4px);box-shadow:0 2px 0 var(--accentDark)}
+.big.alt{background:var(--plum);box-shadow:0 6px 0 var(--plumDark)}
+.big.alt:active{box-shadow:0 2px 0 var(--plumDark)}
+.big small{display:block;font-size:13px;font-weight:600;letter-spacing:0;opacity:.9}
+.link{color:var(--muted);text-decoration:underline;font-size:15px;padding:8px}
+.today{margin:0;color:var(--leafDark);font-size:15px;font-weight:700;min-height:1.2em}
+.warn{margin:0;color:var(--accentDark);font-size:14px}
+
+/* game header */
+.hud{display:flex;align-items:center;gap:12px;padding-block:10px 8px}
+.icon{width:46px;height:46px;border-radius:14px;background:var(--card);box-shadow:0 3px 0 var(--shade);font-size:16px;font-weight:800}
+.stat{display:flex;flex-direction:column;align-items:center;min-width:54px}
+.stat span{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat small{font-size:12px;color:var(--muted)}
+.replay{margin-left:auto;background:var(--leaf);color:#fff;font-size:19px;font-weight:800;padding:11px 18px;border-radius:16px;box-shadow:0 4px 0 var(--leafDark)}
+.replay:active{transform:translateY(3px);box-shadow:0 1px 0 var(--leafDark)}
+.replay:disabled{opacity:.4}
+
+/* word bar (letter mode) */
+#wordBar{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 12px;padding-block:2px 8px;min-height:62px}
+.slots.many .slot{min-width:26px;height:40px;font-size:22px;padding:0 3px}
+#kbd{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;padding-block:0 12px}
+.key{height:46px;border-radius:12px;background:var(--card);box-shadow:0 3px 0 var(--shade);font-size:24px;font-weight:800;color:var(--plumDark)}
+.key:active{transform:translateY(2px);box-shadow:0 1px 0 var(--shade)}
+.key.hint{background:var(--hi);box-shadow:0 0 0 3px var(--accent)}
+.key.nope{animation:wobble .45s}
+#wordBar .pic{font-size:44px;line-height:1}
+.slots{display:flex;gap:5px}
+.slot{min-width:34px;padding:0 6px;box-sizing:border-box;height:46px;border-radius:10px;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;box-shadow:0 3px 0 var(--shade)}
+.slot.dim{color:var(--muted);background:transparent;box-shadow:inset 0 -3px 0 var(--shade)}
+.slot.ask{background:var(--hi);color:var(--accentDark);box-shadow:0 0 0 3px var(--accent)}
+.slot.got{animation:pop .2s ease-out}
+#lvTag{font-size:12px;font-weight:800;color:#fff;background:var(--plum);border-radius:999px;padding:3px 9px;white-space:nowrap}
+
+/* board */
+#boardWrap{flex:1;min-height:0;display:flex;justify-content:center;align-items:flex-end;padding-bottom:14px}
+#board{position:relative;background:linear-gradient(var(--sky1),var(--sky2));border-radius:20px;overflow:hidden;box-shadow:inset 0 0 0 3px var(--card)}
+#line{position:absolute;left:0;right:0;height:0;border-top:3px dashed var(--accent);z-index:1;pointer-events:none}
+#line span{position:absolute;right:8px;top:3px;font-size:12px;font-weight:800;color:var(--accentDark)}
+.tile{position:absolute;left:0;top:0;width:var(--cell);height:var(--cell);padding:4px;box-sizing:border-box;transition:transform .3s linear;z-index:2}
+.tile .em{display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:var(--card);border-radius:26%;box-shadow:0 4px 0 var(--shade);font-size:calc(var(--cell) * .58);line-height:1}
+.tile .em.letter{font-size:calc(var(--cell) * .56);font-weight:800;color:var(--plumDark);padding-bottom:.08em;box-sizing:border-box}
+.tile.landed .em{background:var(--dirt);filter:saturate(.6);box-shadow:none;color:var(--ink)}
+.tile.nope .em{animation:wobble .45s}
+.tile.run{z-index:3}
+.tile.run .em{animation:hop .22s infinite alternate}
+.tile.freed{animation:freed .7s forwards}
+.bubble{position:absolute;transform:translate(-50%,-100%);background:var(--ink);color:#fff;padding:6px 12px;border-radius:14px;white-space:nowrap;font-size:16px;z-index:6;pointer-events:none;animation:pop .18s ease-out}
+.bubble.below{transform:translate(-50%,0)}
+.bubble b{font-size:21px;margin-right:6px;font-weight:800}
+#toast{position:absolute;left:50%;top:38%;transform:translateX(-50%);background:var(--accent);color:#fff;font-weight:800;font-size:20px;padding:10px 20px;border-radius:999px;z-index:8;pointer-events:none;animation:pop .2s ease-out;white-space:nowrap}
+
+/* overlays and end */
+.overlay{position:fixed;inset:0;background:var(--scrim);display:flex;align-items:center;justify-content:center;z-index:20;padding:16px}
+.card{background:var(--card);border-radius:24px;padding:28px 24px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;max-width:320px;width:100%}
+.card h2{margin:0;font-size:26px}
+#end{align-items:center;justify-content:center;gap:16px;text-align:center}
+#end h2{margin:0;font-size:28px;text-wrap:balance}
+.endNum{margin:0;font-size:18px;color:var(--muted)}
+.endNum b{font-size:52px;color:var(--accent);display:block;line-height:1.1;font-variant-numeric:tabular-nums}
+#reviewBox p{margin:0 0 10px;font-size:15px;color:var(--muted)}
+#reviewList{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+.chip{display:flex;align-items:center;gap:8px;background:var(--card);border-radius:16px;padding:8px 14px;box-shadow:0 3px 0 var(--shade)}
+.chip .e{font-size:30px}
+.chip b{font-size:18px}
+.chip span{font-size:13px;color:var(--muted)}
+
+/* parent */
+#parent{overflow-y:auto;-webkit-overflow-scrolling:touch;-webkit-user-select:text;user-select:text;padding-block:16px 32px;gap:22px}
+#parent h2{margin:0;font-size:24px}
+.ptop{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.back{background:var(--card);border-radius:12px;padding:8px 14px;font-weight:700;box-shadow:0 3px 0 var(--shade)}
+.psec{display:flex;flex-direction:column;gap:10px}
+.psec h3{margin:0;font-size:15px;letter-spacing:.08em;color:var(--muted)}
+.psec p.hint{margin:0;font-size:14px;color:var(--muted);line-height:1.5}
+.grp{display:flex;gap:12px;align-items:flex-start;background:var(--card);border-radius:14px;padding:12px 14px}
+.grp input{width:22px;height:22px;margin:2px 0 0;accent-color:var(--accent);flex:none}
+.grp label{display:flex;flex-direction:column;gap:4px;min-width:0}
+.grp b{font-size:17px}
+.grp small{color:var(--muted);font-size:14px;line-height:1.5}
+.seg{display:flex;gap:8px;flex-wrap:wrap}
+.seg button{background:var(--card);border-radius:12px;padding:10px 16px;font-weight:700;box-shadow:0 3px 0 var(--shade)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.note{margin:0;font-size:14px;color:var(--accentDark);min-height:1.2em}
+.tbl{overflow-x:auto;background:var(--card);border-radius:14px}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--sky2);white-space:nowrap}
+th{font-size:13px;color:var(--muted);font-weight:700}
+td.n{text-align:right;font-variant-numeric:tabular-nums}
+.danger{align-self:flex-start;background:var(--card);border-radius:12px;padding:10px 16px;font-weight:700;color:var(--accentDark);box-shadow:0 3px 0 var(--shade)}
+
+@keyframes wobble{0%,100%{transform:rotate(0)}25%{transform:rotate(-10deg)}75%{transform:rotate(10deg)}}
+@keyframes hop{from{transform:translateY(0)}to{transform:translateY(-14%)}}
+@keyframes freed{0%{opacity:1}100%{opacity:0;margin-top:-40px}}
+@keyframes pop{from{opacity:0;scale:.7}to{opacity:1;scale:1}}
+@media (prefers-reduced-motion: reduce){
+  .tile{transition:transform .05s linear}
+  .tile.run .em,.tile.nope .em{animation:none}
+}
+</style>
+
+<div id="app">
+  <section id="home" class="screen">
+    <div class="logo" aria-hidden="true">🐘🐯🦓</div>
+    <h1>動物救援隊</h1>
+    <p class="lead">動物和東西從天上掉下來了！<br>聽聲音，點對的那一個，<br>大家就會一起逃走。</p>
+    <div class="modes">
+      <button id="startListen" class="big">聽音救援<small>聽名字，點動物</small></button>
+      <button id="startSpell" class="big alt">字母救援<small>聽名字，點字母</small></button>
+    </div>
+    <p class="today" id="todayLine"></p>
+    <p class="warn" id="noTts" hidden>這台裝置沒有朗讀聲音，請改用 Safari 開啟。</p>
+    <button id="parentBtn" class="link">家長設定</button>
+  </section>
+
+  <section id="game" class="screen" hidden>
+    <header class="hud">
+      <button id="pauseBtn" class="icon" aria-label="暫停">❚❚</button>
+      <div class="stat"><span id="rescuedNum">0</span><small>救到</small></div>
+      <div class="stat"><span id="timeNum">3:00</span><small>剩下</small></div>
+      <button id="replayBtn" class="replay">🔊 再聽</button>
+    </header>
+    <div id="wordBar" hidden>
+      <div class="pic" id="wbPic"></div>
+      <div class="slots" id="wbSlots"></div>
+      <span id="lvTag"></span>
+    </div>
+    <div id="boardWrap">
+      <div id="board"><div id="line"><span>警戒線</span></div></div>
+    </div>
+    <div id="kbd" hidden></div>
+  </section>
+
+  <section id="end" class="screen" hidden>
+    <h2 id="endTitle">時間到，救援成功！</h2>
+    <p class="endNum"><b id="endRescued">0</b>隻動物得救了</p>
+    <div id="reviewBox">
+      <p>點一下，再聽聽這幾隻：</p>
+      <div id="reviewList"></div>
+    </div>
+    <button id="againBtn" class="big">再玩一次</button>
+    <button id="homeBtn" class="link">回首頁</button>
+  </section>
+
+  <section id="parent" class="screen" hidden></section>
+</div>
+
+<div id="pauseOv" class="overlay" hidden>
+  <div class="card">
+    <h2>休息一下</h2>
+    <button id="resumeBtn" class="big">繼續</button>
+    <button id="quitBtn" class="link">這局先到這裡</button>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- data ---------- */
+const ANIMALS=[
+  {w:'crocodile',zh:'鱷魚',e:'🐊',g:'monster'},
+  {w:'lizard',zh:'蜥蜴',e:'🦎',g:'monster'},
+  {w:'snake',zh:'蛇',e:'🐍',g:'monster'},
+  {w:'spider',zh:'蜘蛛',e:'🕷️',g:'monster'},
+  {w:'frog',zh:'青蛙',e:'🐸',g:'monster'},
+  {w:'bear',zh:'熊',e:'🐻',g:'monster'},
+  {w:'polar bear',zh:'北極熊',e:'🐻‍❄️',g:'monster'},
+  {w:'hippo',zh:'河馬',e:'🦛',g:'monster'},
+  {w:'jellyfish',zh:'水母',e:'🪼',g:'monster'},
+  {w:'elephant',zh:'大象',e:'🐘',g:'zoo'},
+  {w:'horse',zh:'馬',e:'🐴',g:'zoo'},
+  {w:'monkey',zh:'猴子',e:'🐵',g:'zoo'},
+  {w:'tiger',zh:'老虎',e:'🐯',g:'zoo'},
+  {w:'zebra',zh:'斑馬',e:'🦓',g:'zoo'},
+  {w:'giraffe',zh:'長頸鹿',e:'🦒',g:'zoo'},
+  {w:'cat',zh:'貓',e:'🐱',g:'pet'},
+  {w:'dog',zh:'狗',e:'🐶',g:'pet'},
+  {w:'mouse',zh:'老鼠',e:'🐭',g:'pet'},
+  {w:'fish',zh:'魚',e:'🐟',g:'pet'},
+  {w:'bird',zh:'鳥',e:'🐦',g:'pet'},
+  {w:'chicken',zh:'雞',e:'🐔',g:'farm'},
+  {w:'cow',zh:'牛',e:'🐮',g:'farm'},
+  {w:'duck',zh:'鴨子',e:'🦆',g:'farm'},
+  {w:'goat',zh:'山羊',e:'🐐',g:'farm'},
+  {w:'sheep',zh:'綿羊',e:'🐑',g:'farm'},
+  {w:'donkey',zh:'驢子',e:'🫏',g:'farm'},
+  {w:'bee',zh:'蜜蜂',e:'🐝',g:'farm'},
+  {w:'apple',zh:'蘋果',e:'🍎',g:'food'},
+  {w:'banana',zh:'香蕉',e:'🍌',g:'food'},
+  {w:'egg',zh:'蛋',e:'🥚',g:'food'},
+  {w:'cake',zh:'蛋糕',e:'🍰',g:'food'},
+  {w:'milk',zh:'牛奶',e:'🥛',g:'food'},
+  {w:'juice',zh:'果汁',e:'🧃',g:'food'},
+  {w:'lemon',zh:'檸檬',e:'🍋',g:'food'},
+  {w:'carrot',zh:'紅蘿蔔',e:'🥕',g:'food'},
+  {w:'orange',zh:'柳橙',e:'🍊',g:'food'},
+  {w:'bread',zh:'麵包',e:'🍞',g:'food'},
+  {w:'rice',zh:'米飯',e:'🍚',g:'food'},
+  {w:'burger',zh:'漢堡',e:'🍔',g:'food'},
+  {w:'grapes',zh:'葡萄',e:'🍇',g:'food'},
+  {w:'pear',zh:'梨子',e:'🍐',g:'food'},
+  {w:'peach',zh:'桃子',e:'🍑',g:'food'},
+  {w:'onion',zh:'洋蔥',e:'🧅',g:'food'},
+  {w:'hand',zh:'手',e:'✋',g:'body'},
+  {w:'nose',zh:'鼻子',e:'👃',g:'body'},
+  {w:'mouth',zh:'嘴巴',e:'👄',g:'body'},
+  {w:'foot',zh:'腳',e:'🦶',g:'body'},
+  {w:'leg',zh:'腿',e:'🦵',g:'body'},
+  {w:'bed',zh:'床',e:'🛏️',g:'home'},
+  {w:'book',zh:'書',e:'📕',g:'home'},
+  {w:'box',zh:'箱子',e:'📦',g:'home'},
+  {w:'clock',zh:'時鐘',e:'⏰',g:'home'},
+  {w:'door',zh:'門',e:'🚪',g:'home'},
+  {w:'sofa',zh:'沙發',e:'🛋️',g:'home'},
+  {w:'phone',zh:'電話',e:'📱',g:'home'},
+  {w:'computer',zh:'電腦',e:'💻',g:'home'},
+  {w:'pencil',zh:'鉛筆',e:'✏️',g:'home'},
+  {w:'bag',zh:'包包',e:'🎒',g:'home'},
+  {w:'hat',zh:'帽子',e:'🎩',g:'home'},
+  {w:'shoe',zh:'鞋子',e:'👟',g:'home'},
+  {w:'sock',zh:'襪子',e:'🧦',g:'home'},
+  {w:'shirt',zh:'襯衫',e:'👕',g:'home'},
+  {w:'car',zh:'汽車',e:'🚗',g:'toy'},
+  {w:'bus',zh:'公車',e:'🚌',g:'toy'},
+  {w:'bike',zh:'腳踏車',e:'🚲',g:'toy'},
+  {w:'train',zh:'火車',e:'🚆',g:'toy'},
+  {w:'boat',zh:'船',e:'⛵',g:'toy'},
+  {w:'plane',zh:'飛機',e:'✈️',g:'toy'},
+  {w:'ball',zh:'球',e:'🏀',g:'toy'},
+  {w:'kite',zh:'風箏',e:'🪁',g:'toy'},
+  {w:'robot',zh:'機器人',e:'🤖',g:'toy'},
+  {w:'football',zh:'足球',e:'⚽',g:'toy'},
+  {w:'goal',zh:'球門',e:'🥅',g:'toy'},
+  {w:'sun',zh:'太陽',e:'☀️',g:'sky'},
+  {w:'moon',zh:'月亮',e:'🌙',g:'sky'},
+  {w:'star',zh:'星星',e:'⭐',g:'sky'},
+  {w:'tree',zh:'樹',e:'🌳',g:'sky'},
+  {w:'flower',zh:'花',e:'🌸',g:'sky'}
+];
+const BY={}; ANIMALS.forEach(a=>BY[a.w]=a);
+const GROUPS=[
+  {id:'zoo',name:'動物園組',hint:'學校課本也會教'},
+  {id:'monster',name:'怪獸組',hint:'哥吉拉的朋友'},
+  {id:'pet',name:'寵物組',hint:'家裡常見'},
+  {id:'farm',name:'農場組',hint:'聽叫聲也好玩'},
+  {id:'food',name:'食物組',hint:'含安親班教過的 peach'},
+  {id:'body',name:'身體組',hint:'可以邊玩邊指'},
+  {id:'home',name:'家裡組',hint:'家裡、書包裡的東西'},
+  {id:'toy',name:'玩具交通組',hint:'含足球 football、goal'},
+  {id:'sky',name:'戶外組',hint:'太陽、月亮、樹'}
+];
+const NEW_GROUPS=['food','body','home','toy','sky'];
+/* phonics chunks: one-syllable words split onset + rime (word family), longer words split by syllable */
+const CHUNKS={
+  crocodile:['croc','o','dile'], lizard:['liz','ard'], snake:['sn','ake'], spider:['spi','der'],
+  frog:['fr','og'], bear:['b','ear'], hippo:['hip','po'], jellyfish:['jel','ly','fish'],
+  elephant:['el','e','phant'], horse:['h','orse'], monkey:['mon','key'], tiger:['ti','ger'],
+  zebra:['ze','bra'], giraffe:['gi','raffe'], cat:['c','at'], dog:['d','og'], mouse:['m','ouse'],
+  fish:['f','ish'], bird:['b','ird'], chicken:['chick','en'], cow:['c','ow'], duck:['d','uck'],
+  goat:['g','oat'], sheep:['sh','eep'], donkey:['don','key'], bee:['b','ee'],
+  apple:['ap','ple'], banana:['ba','na','na'], egg:['e','gg'], cake:['c','ake'], milk:['m','ilk'],
+  juice:['j','uice'], lemon:['lem','on'], carrot:['car','rot'], orange:['or','ange'], bread:['br','ead'],
+  rice:['r','ice'], burger:['bur','ger'], grapes:['gr','apes'], pear:['p','ear'], peach:['p','each'],
+  onion:['on','ion'], hand:['h','and'], nose:['n','ose'], mouth:['m','outh'], foot:['f','oot'],
+  leg:['l','eg'], bed:['b','ed'], book:['b','ook'], box:['b','ox'], clock:['cl','ock'], door:['d','oor'],
+  sofa:['so','fa'], phone:['ph','one'], computer:['com','pu','ter'], pencil:['pen','cil'], bag:['b','ag'],
+  hat:['h','at'], shoe:['sh','oe'], sock:['s','ock'], shirt:['sh','irt'], car:['c','ar'], bus:['b','us'],
+  bike:['b','ike'], train:['tr','ain'], boat:['b','oat'], plane:['pl','ane'], ball:['b','all'],
+  kite:['k','ite'], robot:['ro','bot'], football:['foot','ball'], goal:['g','oal'], sun:['s','un'],
+  moon:['m','oon'], star:['st','ar'], tree:['tr','ee'], flower:['flow','er']
+};
+/* one tile per sound (grapheme), only for words that follow regular phonics (no silent-e words) */
+const PHON={
+  cat:['c','a','t'], dog:['d','o','g'], frog:['f','r','o','g'], duck:['d','u','ck'], fish:['f','i','sh'],
+  sheep:['sh','ee','p'], goat:['g','oa','t'], bird:['b','ir','d'], cow:['c','ow'], bee:['b','ee'],
+  tiger:['t','i','g','er'], spider:['s','p','i','d','er'], zebra:['z','e','b','r','a'], lizard:['l','i','z','ar','d'],
+  hippo:['h','i','pp','o'], monkey:['m','o','n','k','ey'], donkey:['d','o','n','k','ey'], chicken:['ch','i','ck','e','n'],
+  egg:['e','gg'], milk:['m','i','l','k'], lemon:['l','e','m','o','n'], peach:['p','ea','ch'], carrot:['c','a','rr','o','t'],
+  hand:['h','a','n','d'], leg:['l','e','g'], foot:['f','oo','t'], bed:['b','e','d'], book:['b','oo','k'], box:['b','o','x'],
+  clock:['c','l','o','ck'], bag:['b','a','g'], hat:['h','a','t'], sock:['s','o','ck'], shirt:['sh','ir','t'],
+  bus:['b','u','s'], robot:['r','o','b','o','t'], train:['t','r','ai','n'], boat:['b','oa','t'], goal:['g','oa','l'],
+  sun:['s','u','n'], moon:['m','oo','n'], star:['s','t','ar'], tree:['t','r','ee']
+};
+/* same sound, different spelling: used as traps on the top level */
+const SOUND_ALT={ee:['ea'],ea:['ee'],c:['k'],k:['c','ck'],ck:['k'],ir:['er','ur'],er:['ir','ur'],oa:['ow'],ow:['oa'],
+  ai:['ay'],oo:['u'],ey:['y','ee'],gg:['g'],pp:['p'],rr:['r'],x:['ks'],z:['s'],f:['ph'],ar:['or']};
+const LEVEL_NAME={0:'找開頭',1:'兩塊',2:'兩塊・相近',3:'三塊',4:'只聽不看',5:'一音一塊',6:'一音一塊・只聽',7:'全拼',8:'全拼・只聽'};
+const LEVEL_SLOW={0:1.3,1:1.3,2:1.3,3:1.5,4:1.5,5:1.3,6:1.5,7:1.6,8:1.8};
+const MAX_LEVEL=8;
+const ALL_LEVELS=[0,1,2,3,4,5,6,7,8];
+const noPic=lv=>lv===4||lv===6||lv===8;
+/* pairs that sound or look alike: kept apart while only 3 animals show */
+const CONF={bear:['bee','polar bear'],'polar bear':['bear'],bee:['bear'],cat:['cow'],cow:['cat','goat'],goat:['cow'],
+  frog:['fish'],fish:['frog'],dog:['duck'],duck:['dog'],mouse:['monkey'],monkey:['mouse'],horse:['hippo'],hippo:['horse']};
+/* letters that make the same first sound: never offered together */
+const SAME_SOUND={c:['k','s'],k:['c'],s:['c','z'],z:['s'],g:['j'],j:['g']};
+const FIRSTS=[...new Set(Object.values(CHUNKS).map(c=>c[0]))];
+const RESTS=[...new Set([].concat(...Object.values(CHUNKS).map(c=>c.slice(1))))];
+const PHONES=[...new Set([].concat(...Object.values(PHON)))];
+const ROWS=9, COLS=5, FAIL_ROWS=6, MIN_WORDS=6;
+
+/* ---------- storage ---------- */
+const KEY='animalRescue.v1';
+let DB={};
+try{DB=JSON.parse(localStorage.getItem(KEY))||{};}catch(e){DB={};}
+DB.settings=Object.assign({groups:['zoo','monster'].concat(NEW_GROUPS),speed:1200,minutes:3,startN:3,spellStart:1,spellN:3},DB.settings||{});
+/* v3 added new word groups: switch them on once for existing players */
+if(DB.wordsVer!==3){DB.settings.groups=[...new Set(DB.settings.groups.concat(NEW_GROUPS))];DB.wordsVer=3;}
+DB.stats=DB.stats||{};
+DB.spell=DB.spell||{};
+DB.spellMiss=DB.spellMiss||{};
+/* spelling levels changed meaning in v2: start their records fresh */
+if(!DB.spellVer||DB.spellVer<2){DB.spell={};DB.spellMiss={};DB.spellVer=2;DB.settings.spellStart=1;}
+/* v3: full spelling added; start there once, parent can move it back */
+if(DB.spellVer<3){DB.settings.spellStart=7;DB.spellVer=3;}
+DB.play=DB.play||{};
+function save(){try{localStorage.setItem(KEY,JSON.stringify(DB));}catch(e){}}
+function st(w){return DB.stats[w]||(DB.stats[w]={seen:0,ok:0,miss:0});}
+function sl(lv){return DB.spell[lv]||(DB.spell[lv]={seen:0,ok:0,miss:0});}
+function todayKey(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function enabledWords(){return ANIMALS.filter(a=>DB.settings.groups.includes(a.g)).map(a=>a.w);}
+
+/* ---------- speech ---------- */
+const synth=('speechSynthesis' in window)?window.speechSynthesis:null;
+let voice=null, speakToken=0;
+function pickVoice(){
+  if(!synth) return;
+  const vs=synth.getVoices();
+  const us=vs.filter(v=>/^en[-_]US/i.test(v.lang));
+  voice=us.find(v=>/Samantha/i.test(v.name))||us.find(v=>v.localService)||us[0]||vs.find(v=>/^en/i.test(v.lang))||null;
+}
+if(synth){pickVoice(); if(synth.addEventListener) synth.addEventListener('voiceschanged',pickVoice); else synth.onvoiceschanged=pickVoice;}
+function speak(text,cb,rate){
+  rate=rate||0.82;
+  const my=++speakToken; let done=false;
+  const finish=()=>{if(done) return; done=true; clearTimeout(t); if(my===speakToken&&cb) cb();};
+  const t=setTimeout(finish,1200+text.length*95/rate);
+  if(!synth) return;
+  try{
+    synth.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang='en-US'; if(voice) u.voice=voice;
+    u.rate=rate; u.pitch=1.05;
+    u.onend=finish; u.onerror=finish;
+    synth.speak(u);
+  }catch(e){}
+}
+function art(w){return /^[aeiou]/i.test(w)?'an':'a';}
+
+/* ---------- helpers ---------- */
+const $=id=>document.getElementById(id);
+const rand=a=>a[Math.floor(Math.random()*a.length)];
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function show(id){['home','game','end','parent'].forEach(s=>$(s).hidden=(s!==id));}
+
+const board=$('board'), line=$('line');
+let cell=60;
+
+function layout(){
+  const wrap=$('boardWrap');
+  const w=wrap.clientWidth, h=wrap.clientHeight-14;
+  cell=Math.max(34,Math.floor(Math.min(w/COLS,h/ROWS)));
+  board.style.width=cell*COLS+'px';
+  board.style.height=cell*ROWS+'px';
+  document.documentElement.style.setProperty('--cell',cell+'px');
+  line.style.top=(ROWS-FAIL_ROWS)*cell+'px';
+  if(!g) return;
+  if(g.wave&&!g.wave.done) g.wave.items.forEach(it=>place(it.el,it.col,g.wave.row));
+  layoutStack();
+}
+function place(el,col,row){el.style.transform='translate('+(col*cell)+'px,'+(row*cell)+'px)';}
+function layoutStack(){g.stack.forEach((row,i)=>row.forEach(it=>place(it.el,it.col,ROWS-1-i)));}
+
+function makeTile(label,isLetter){
+  const el=document.createElement('div');
+  el.className='tile';
+  const fs={1:.56,2:.46,3:.38,4:.31,5:.26}[label.length]||.24;
+  el.innerHTML='<div class="em'+(isLetter?' letter':'')+'"'+(isLetter?' style="font-size:calc(var(--cell) * '+fs+')"':'')+'>'+label+'</div>';
+  el.addEventListener('pointerdown',e=>{e.preventDefault();onTap(el);});
+  return el;
+}
+function bubble(word,col,row){
+  const b=document.createElement('div');
+  b.className='bubble'+(row<1?' below':'');
+  b.innerHTML='<b>'+word+'</b>'+BY[word].zh;
+  b.style.left=Math.min(Math.max(col*cell+cell/2,60),COLS*cell-60)+'px';
+  b.style.top=(row<1?(row+1)*cell+4:row*cell-4)+'px';
+  board.appendChild(b);
+  setTimeout(()=>b.remove(),1800);
+}
+function toast(msg){
+  const t=document.createElement('div');
+  t.id='toast'; t.textContent=msg;
+  board.appendChild(t);
+  setTimeout(()=>t.remove(),1500);
+}
+
+/* ---------- word bar ---------- */
+function renderBar(){
+  const w=g.wave; if(!w||w.kind!=='spell') return;
+  $('wbPic').textContent=(noPic(w.level)&&!w.reveal)?'🔊':BY[w.target].e;
+  $('lvTag').textContent=LEVEL_NAME[w.level];
+  const box=$('wbSlots'); box.innerHTML='';
+  box.className='slots'+(w.shown.length>6?' many':'');
+  w.shown.forEach((ch,i)=>{
+    const s=document.createElement('div');
+    let cls='slot';
+    if(ch===null){cls+=(i===w.askIdx?' ask':' dim'); s.textContent=(i===w.askIdx?'?':'_');}
+    else {s.textContent=ch; if(w.justGot===i) cls+=' got';}
+    s.className=cls;
+    box.appendChild(s);
+  });
+  w.justGot=-1;
+}
+
+/* ---------- game ---------- */
+let g=null;
+let lastMode='listen';
+
+function startGame(mode){
+  mode=mode||lastMode; lastMode=mode;
+  if(synth){try{synth.cancel();synth.speak(new SpeechSynthesisUtterance(''));}catch(e){}}
+  board.querySelectorAll('.tile,.bubble,#toast').forEach(n=>n.remove());
+  const n0=Number(DB.settings.startN)||3;
+  g={mode,waveNo:0,wave:null,stack:[],rescued:0,streak:0,landStreak:0,
+     n:n0,minN:n0,level:ALL_LEVELS.includes(Number(DB.settings.spellStart))?Number(DB.settings.spellStart):1,
+     timeLeft:DB.settings.minutes*60000,timeUp:false,running:true,paused:false,ended:false,
+     speaking:false,due:[],lastTargets:[],roundMiss:new Set(),playMs:0,pendingNext:false};
+  $('wordBar').hidden=(mode!=='spell');
+  $('kbd').hidden=true;
+  show('game');
+  layout();
+  updateHud();
+  nextWave();
+}
+
+function updateHud(){
+  $('rescuedNum').textContent=g.rescued;
+  const s=Math.ceil(g.timeLeft/1000);
+  $('timeNum').textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+}
+
+function pickTarget(pool){
+  const di=g.due.findIndex(d=>d.at<=g.waveNo&&pool.includes(d.word)&&!g.lastTargets.includes(d.word));
+  if(di>=0) return g.due.splice(di,1)[0].word;
+  if(g.mode==='listen'){
+    const stacked=[].concat(...g.stack).map(i=>i.word).filter(w=>!g.lastTargets.includes(w));
+    if(stacked.length&&Math.random()<0.35) return rand(stacked);
+  }
+  let c=pool.filter(w=>!g.lastTargets.includes(w));
+  if(!c.length) c=pool;
+  return rand(c);
+}
+function pickOthers(pool,target,k){
+  let c=shuffle(pool.filter(w=>w!==target));
+  if(g.n<=3){
+    const f=c.filter(w=>!(CONF[target]||[]).includes(w)&&!(CONF[w]||[]).includes(target));
+    if(f.length>=k) c=f;
+  }
+  return c.slice(0,k);
+}
+/* k wrong tiles for one slot.
+   near=true picks look-alikes (same first or last letter).
+   trap=true also adds one same-sound spelling (ee/ea, c/k, er/ir) when there is one. */
+function pickChoices(ans,src,k,near,exclude,trap){
+  const bad=new Set([ans].concat(exclude||[]));
+  const alts=SOUND_ALT[ans]||[];
+  const same=src===FIRSTS?(SAME_SOUND[ans[0]]||[]):[];
+  const c=src.filter(x=>!bad.has(x)&&!same.includes(x[0])&&!alts.includes(x));
+  const sim=x=>x[0]===ans[0]||x[x.length-1]===ans[ans.length-1];
+  let out=[];
+  if(trap&&alts.length) out.push(rand(alts.filter(a=>!bad.has(a))||alts));
+  out=out.filter(Boolean);
+  out=out.concat(shuffle(near?c.filter(sim):c.filter(x=>!sim(x))).slice(0,k-out.length));
+  if(out.length<k) out=out.concat(shuffle(c.filter(x=>!out.includes(x))).slice(0,k-out.length));
+  return out.slice(0,k);
+}
+function spawnSlot(w,row){
+  const i=w.asks[w.step];
+  w.askIdx=i; w.answer=w.chunks[i];
+  const k=Math.min(4,Math.max(2,(Number(DB.settings.spellN)||3)-1));
+  const phon=w.level>=5;
+  const src=phon?PHONES:(i===0?FIRSTS:RESTS);
+  const opts=shuffle([w.answer].concat(pickChoices(w.answer,src,k,w.level>=2,w.chunks,w.level===6)));
+  return spawn(opts,true,row);
+}
+
+function spawn(labels,isLetter,row){
+  row=row||0;
+  const cols=shuffle([0,1,2,3,4]);
+  const items=labels.map((lab,i)=>{
+    const el=makeTile(isLetter?lab:BY[lab].e,isLetter);
+    place(el,cols[i],-1);
+    board.appendChild(el);
+    return Object.assign({col:cols[i],el},isLetter?{letter:lab}:{word:lab});
+  });
+  board.getBoundingClientRect();
+  items.forEach(it=>place(it.el,it.col,row));
+  return items;
+}
+
+function nextWave(){
+  if(!g||g.ended) return;
+  if(g.paused){g.pendingNext=true;return;}
+  if(g.timeUp){endRound('win');return;}
+  g.waveNo++;
+  let w;
+  if(g.mode==='listen'){
+    const pool=enabledWords();
+    const target=pickTarget(pool);
+    const words=shuffle([target].concat(pickOthers(pool,target,g.n-1)));
+    w={kind:'listen',target,items:spawn(words,false)};
+    st(target).seen++;
+  }else{
+    const lv=g.level;
+    if(lv>=7){
+      /* full spelling: one falling word block, every letter typed on the in-game keyboard */
+      let pool=enabledWords().filter(x=>!x.includes(' '));
+      if(pool.length<3) pool=Object.keys(CHUNKS);
+      if(lv===7){const s=pool.filter(x=>x.length<=5); if(s.length>=3) pool=s;}
+      const target=pickTarget(pool);
+      const ch=target.split('');
+      w={kind:'spell',typed:true,level:lv,target,chunks:ch,step:0,justGot:-1,
+         shown:ch.map(()=>null),asks:ch.map((c,i)=>i),askIdx:0,answer:ch[0],wrongHere:0};
+      w.items=spawnWord(target,noPic(lv));
+    }else{
+      const phon=lv>=5, MAP=phon?PHON:CHUNKS;
+      let pool=enabledWords().filter(x=>MAP[x]);
+      if(pool.length<3) pool=Object.keys(MAP);
+      const two=pool.filter(x=>lv>=3||CHUNKS[x].length===2);
+      if(two.length>=3) pool=two;
+      const target=pickTarget(pool);
+      const ch=MAP[target];
+      w={kind:'spell',level:lv,target,chunks:ch,step:0,justGot:-1,
+         shown:ch.map((c,i)=>(lv===0&&i>0)?c:null),
+         asks:lv===0?[0]:ch.map((c,i)=>i)};
+      w.items=spawnSlot(w,0);
+    }
+    sl(lv).seen++;
+  }
+  Object.assign(w,{row:0,acc:0,done:false,missed:false,replayed:false});
+  g.wave=w;
+  setKbd(!!w.typed);
+  clearKeyHints();
+  save();
+  if(w.kind==='spell') renderBar();
+  g.lastTargets.push(w.target); if(g.lastTargets.length>2) g.lastTargets.shift();
+  $('replayBtn').disabled=false;
+  g.speaking=true;
+  speak(w.target,()=>{g.speaking=false;},w.kind==='spell'?0.6:0);
+}
+
+function stepWave(){
+  const w=g.wave;
+  const landRow=ROWS-1-g.stack.length;
+  if(w.row>=landRow){land();return;}
+  w.row++;
+  w.items.forEach(it=>place(it.el,it.col,w.row));
+  if(w.row===4&&!w.replayed&&!g.speaking){w.replayed=true;speak(w.target);}
+  if(w.row>=landRow) setTimeout(()=>{if(g&&g.wave===w&&!w.done) land();},320);
+}
+
+function markMiss(w){
+  if(w.missed) return;
+  w.missed=true;
+  if(w.kind==='listen') st(w.target).miss++;
+  else {sl(w.level).miss++; DB.spellMiss[w.target]=(DB.spellMiss[w.target]||0)+1;}
+  save();
+  g.due.push({word:w.target,at:g.waveNo+3});
+  g.roundMiss.add(w.target);
+}
+
+function onTap(el){
+  if(!g||!g.running||g.paused||!g.wave||g.wave.done) return;
+  const w=g.wave;
+  const item=w.items.find(i=>i.el===el);
+  if(!item) return;
+  if(w.kind==='listen'){
+    if(item.word===w.target) win(item); else wrongListen(item);
+    return;
+  }
+  if(w.typed){speak(w.target,null,0.6);return;}
+  if(item.letter!==w.answer){wrongSpell(item);return;}
+  /* right chunk: fill the slot, clear this set, then the next slot's set drops from 2 rows higher */
+  w.shown[w.askIdx]=w.answer; w.justGot=w.askIdx; w.step++;
+  const col=item.col;
+  w.items.forEach(i=>{i.el.classList.add('freed');setTimeout(()=>i.el.remove(),700);});
+  w.items=[];
+  if(w.step>=w.asks.length){w.askIdx=-1;renderBar();win({col});return;}
+  w.row=Math.max(0,w.row-2); w.acc=0; w.replayed=true;
+  w.items=spawnSlot(w,w.row);
+  renderBar();
+  g.speaking=true;
+  speak(w.target,()=>{g.speaking=false;},0.6);
+}
+
+/* ---------- full spelling (levels 7-8) ---------- */
+function spawnWord(t,hide){
+  const el=makeTile(hide?'🔊':BY[t].e,false);
+  place(el,2,-1);
+  board.appendChild(el);
+  board.getBoundingClientRect();
+  place(el,2,0);
+  return [{col:2,el,word:t}];
+}
+function setKbd(on){
+  const k=$('kbd');
+  if(k.hidden===!on) return;
+  k.hidden=!on;
+  layout();
+}
+function clearKeyHints(){document.querySelectorAll('#kbd .key.hint').forEach(k=>k.classList.remove('hint'));}
+function keyEl(ch){return document.querySelector('#kbd .key[data-k="'+ch+'"]');}
+function onKey(ch){
+  if(!g||!g.running||g.paused||!g.wave||g.wave.done||!g.wave.typed) return;
+  const w=g.wave;
+  if(ch!==w.answer){
+    markMiss(w);
+    g.streak=0;
+    w.wrongHere++;
+    const k=keyEl(ch); if(k) wobble(k);
+    if(w.wrongHere>=2){const h=keyEl(w.answer); if(h) h.classList.add('hint');}
+    g.speaking=true;
+    speak(w.target,()=>{g.speaking=false;},0.6);
+    return;
+  }
+  clearKeyHints();
+  w.shown[w.askIdx]=ch; w.justGot=w.askIdx; w.step++; w.wrongHere=0;
+  /* every right letter lifts the block one row */
+  w.row=Math.max(0,w.row-1); w.acc=0;
+  w.items.forEach(it=>place(it.el,it.col,w.row));
+  if(w.step>=w.chunks.length){w.askIdx=-1;renderBar();win({col:2});return;}
+  w.askIdx=w.step; w.answer=w.chunks[w.step];
+  renderBar();
+}
+function buildKbd(){
+  const k=$('kbd');
+  'abcdefghijklmnopqrstuvwxyz'.split('').forEach(ch=>{
+    const b=document.createElement('button');
+    b.className='key'; b.dataset.k=ch; b.textContent=ch;
+    b.setAttribute('aria-label',ch);
+    b.addEventListener('pointerdown',e=>{e.preventDefault();onKey(ch);});
+    k.appendChild(b);
+  });
+}
+
+function runAway(items,row){
+  items.forEach((it,i)=>{
+    it.el.classList.add('run');
+    it.el.style.transition='transform .8s cubic-bezier(.55,0,.85,.4) '+(i*70)+'ms';
+    it.el.style.transform='translate('+(COLS*cell+cell)+'px,'+(row*cell)+'px)';
+    setTimeout(()=>it.el.remove(),1000+i*70);
+  });
+}
+
+function win(item){
+  const w=g.wave;
+  w.done=true;
+  $('replayBtn').disabled=true;
+  g.streak++; g.landStreak=0;
+  g.speaking=true;
+  const goNext=()=>{g.speaking=false;setTimeout(nextWave,600);};
+  if(w.kind==='listen'){
+    if(!w.missed){st(w.target).ok++; save();}
+    g.rescued+=w.items.length;
+    bubble(w.target,item.col,w.row);
+    speak(w.target+'!',goNext);
+    if(freeFromStack(w.target)) g.rescued++;
+    if(g.streak>=5&&g.n<5){g.n++;g.streak=0;setTimeout(()=>toast('更多動物來了！'),300);}
+  }else{
+    if(!w.missed){sl(w.level).ok++; save();}
+    g.rescued+=1;
+    const col=item?item.col:2;
+    bubble(w.target,col,w.row);
+    w.reveal=true; renderBar();
+    readChunks(w,goNext);
+    if(freeTopRow()) toast('清掉一排！');
+    if(g.streak>=5&&g.level<MAX_LEVEL){g.level++;g.streak=0;setTimeout(()=>toast('升級：'+LEVEL_NAME[g.level]),400);}
+  }
+  runAway(w.items,w.row);
+  updateHud();
+}
+
+/* light up each chunk in turn while the word is read slowly, then once at normal speed */
+function readChunks(w,done){
+  const slots=$('wbSlots').children;
+  [...slots].forEach((s,i)=>setTimeout(()=>{
+    [...slots].forEach(x=>x.classList.remove('ask'));
+    s.classList.add('ask');
+  },i*500));
+  setTimeout(()=>[...slots].forEach(x=>x.classList.remove('ask')),slots.length*500+200);
+  speak(w.target+'...',()=>speak(w.target+'!',done),0.5);
+}
+
+function wrongListen(item){
+  const w=g.wave;
+  markMiss(w);
+  g.streak=0;
+  wobble(item.el);
+  bubble(item.word,item.col,w.row);
+  g.speaking=true;
+  speak("That's "+art(item.word)+' '+item.word+'. Find the '+w.target+'!',()=>{g.speaking=false;});
+}
+function wrongSpell(item){
+  const w=g.wave;
+  markMiss(w);
+  g.streak=0;
+  wobble(item.el);
+  g.speaking=true;
+  speak('Listen: '+w.target+'.',()=>{g.speaking=false;},0.6);
+}
+function wobble(el){el.classList.remove('nope'); void el.offsetWidth; el.classList.add('nope');}
+
+function freeFromStack(word){
+  for(let r=g.stack.length-1;r>=0;r--){
+    const idx=g.stack[r].findIndex(i=>i.word===word);
+    if(idx>=0){
+      const it=g.stack[r].splice(idx,1)[0];
+      bubble(word,it.col,ROWS-1-r);
+      it.el.classList.add('freed');
+      setTimeout(()=>it.el.remove(),700);
+      if(!g.stack[r].length) g.stack.splice(r,1);
+      setTimeout(()=>{if(g) layoutStack();},350);
+      return true;
+    }
+  }
+  return false;
+}
+function freeTopRow(){
+  if(!g.stack.length) return false;
+  const row=g.stack.pop();
+  row.forEach(it=>{it.el.classList.add('freed');setTimeout(()=>it.el.remove(),700);});
+  return true;
+}
+
+function land(){
+  const w=g.wave;
+  w.done=true;
+  $('replayBtn').disabled=true;
+  markMiss(w);
+  g.streak=0; g.landStreak++;
+  if(g.landStreak>=2){
+    if(w.kind==='listen'&&g.n>g.minN) g.n--;
+    if(w.kind==='spell'&&g.level>1){g.level--;setTimeout(()=>toast('換成：'+LEVEL_NAME[g.level]),300);}
+    g.landStreak=0;
+  }
+  w.items.forEach(it=>it.el.classList.add('landed'));
+  if(w.items.length) g.stack.push(w.items.map(it=>({word:it.word,letter:it.letter,col:it.col,el:it.el})));
+  layoutStack();
+  g.speaking=true;
+  const full=g.stack.length>FAIL_ROWS;
+  const after=()=>{g.speaking=false; if(full) endRound('full'); else setTimeout(nextWave,600);};
+  if(w.kind==='listen'){
+    const t=w.items.find(i=>i.word===w.target);
+    bubble(w.target,t.col,ROWS-g.stack.length);
+    speak('It was the '+w.target+'.',after);
+  }else{
+    w.shown=w.chunks.slice(); w.askIdx=-1; w.reveal=true; renderBar();
+    bubble(w.target,2,ROWS-g.stack.length);
+    readChunks(w,after);
+  }
+}
+
+function flushPlay(){
+  if(!g||!g.playMs) return;
+  const k=todayKey();
+  DB.play[k]=(DB.play[k]||0)+g.playMs;
+  g.playMs=0; save();
+}
+
+function endRound(kind){
+  if(!g||g.ended) return;
+  g.ended=true; g.running=false;
+  if(synth){try{synth.cancel();}catch(e){}}
+  flushPlay();
+  $('pauseOv').hidden=true;
+  const titles={win:'時間到，救援成功！',full:'動物太多了，先休息一下',quit:'這局先到這裡'};
+  $('endTitle').textContent=titles[kind];
+  $('endRescued').textContent=g.rescued;
+  const list=$('reviewList'); list.innerHTML='';
+  const miss=[...g.roundMiss];
+  $('reviewBox').hidden=!miss.length;
+  miss.forEach(w=>{
+    const b=document.createElement('button');
+    b.className='chip';
+    b.innerHTML='<span class="e">'+BY[w].e+'</span><b>'+w+'</b><span>'+BY[w].zh+'</span>';
+    if(g&&g.mode==='spell'&&CHUNKS[w]) b.querySelector('b').textContent=CHUNKS[w].join('·');
+    b.addEventListener('click',()=>speak(w,null,0.6));
+    list.appendChild(b);
+  });
+  board.querySelectorAll('.tile,.bubble,#toast').forEach(n=>n.remove());
+  show('end');
+}
+
+function pause(){
+  if(!g||g.ended||g.paused) return;
+  g.paused=true;
+  if(synth){try{synth.cancel();}catch(e){}}
+  g.speaking=false;
+  flushPlay();
+  $('pauseOv').hidden=false;
+}
+function resume(){
+  if(!g||!g.paused) return;
+  g.paused=false;
+  $('pauseOv').hidden=true;
+  if(g.pendingNext){g.pendingNext=false;nextWave();return;}
+  if(g.wave&&!g.wave.done){g.speaking=true;speak(g.wave.target,()=>{g.speaking=false;},g.mode==='spell'?0.6:0);}
+  else if(g.wave&&g.wave.done){setTimeout(nextWave,300);}
+}
+
+/* main loop */
+let last=0;
+function loop(now){
+  const dt=last?Math.min(120,now-last):0; last=now;
+  if(g&&g.running&&!g.paused&&!g.ended){
+    g.playMs+=dt;
+    if(!g.timeUp){
+      g.timeLeft-=dt;
+      if(g.timeLeft<=0){g.timeLeft=0;g.timeUp=true;}
+      updateHud();
+    }
+    const w=g.wave;
+    if(w&&!w.done&&!g.speaking){
+      const speed=DB.settings.speed*(w.kind==='spell'?LEVEL_SLOW[w.level]:1);
+      w.acc+=dt;
+      if(w.acc>=speed){w.acc-=speed;stepWave();}
+    }
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ---------- home ---------- */
+function renderHome(){
+  const ms=DB.play[todayKey()]||0;
+  const m=Math.round(ms/60000);
+  $('todayLine').textContent=ms>=30000?('今天玩了 '+Math.max(1,m)+' 分鐘'):'';
+  $('noTts').hidden=!!synth;
+  show('home');
+}
+
+/* ---------- parent ---------- */
+let resetArmed=false;
+function renderParent(note){
+  const p=$('parent');
+  const s=DB.settings;
+  const groupsHtml=GROUPS.map(gr=>{
+    const ws=ANIMALS.filter(a=>a.g===gr.id);
+    return '<div class="grp"><input type="checkbox" id="g_'+gr.id+'" data-g="'+gr.id+'"'+(s.groups.includes(gr.id)?' checked':'')+'>'+
+      '<label for="g_'+gr.id+'"><b>'+gr.name+'　<small>'+gr.hint+'</small></b><small>'+ws.map(a=>a.e+' '+a.w+' '+a.zh).join('、')+'</small></label></div>';
+  }).join('');
+  const seg=(name,opts,cur)=>'<div class="seg">'+opts.map(o=>'<button data-set="'+name+'" data-v="'+o[0]+'" aria-pressed="'+(o[0]===Number(cur))+'">'+o[1]+'</button>').join('')+'</div>';
+  const rows=ANIMALS.filter(a=>DB.stats[a.w]&&DB.stats[a.w].seen)
+    .map(a=>({a,s:DB.stats[a.w]}))
+    .sort((x,y)=>(y.s.miss/y.s.seen)-(x.s.miss/x.s.seen)||y.s.seen-x.s.seen);
+  const table=rows.length
+    ?'<div class="tbl"><table><thead><tr><th>字</th><th>出現</th><th>一次就對</th><th>需要再聽</th></tr></thead><tbody>'+
+      rows.map(r=>'<tr><td>'+r.a.e+' '+r.a.w+' '+r.a.zh+'</td><td class="n">'+r.s.seen+'</td><td class="n">'+r.s.ok+'</td><td class="n">'+r.s.miss+'</td></tr>').join('')+
+      '</tbody></table></div>'
+    :'<p class="hint">還沒有紀錄。玩過一局後這裡會列出每隻動物的狀況。</p>';
+  const lvRows=ALL_LEVELS.filter(lv=>DB.spell[lv]&&DB.spell[lv].seen);
+  const spellTable=lvRows.length
+    ?'<div class="tbl"><table><thead><tr><th>關卡</th><th>出現</th><th>一次就對</th><th>比例</th></tr></thead><tbody>'+
+      lvRows.map(lv=>{const x=DB.spell[lv];return '<tr><td>'+lv+' '+LEVEL_NAME[lv]+'</td><td class="n">'+x.seen+'</td><td class="n">'+x.ok+'</td><td class="n">'+Math.round(x.ok/x.seen*100)+'%</td></tr>';}).join('')+
+      '</tbody></table></div>'
+    :'<p class="hint">還沒有字母救援的紀錄。</p>';
+  const hard=Object.keys(DB.spellMiss).filter(w=>BY[w]).sort((a,b)=>DB.spellMiss[b]-DB.spellMiss[a]).slice(0,8);
+  const hardHtml=hard.length?'<p class="hint">常卡住的字：'+hard.map(w=>BY[w].e+' '+w+'（'+DB.spellMiss[w]+'）').join('、')+'</p>':'';
+  const days=Object.keys(DB.play).sort().slice(-7).reverse();
+  const playHtml=days.length
+    ?'<div class="tbl"><table><thead><tr><th>日期</th><th>遊玩分鐘</th></tr></thead><tbody>'+days.map(d=>'<tr><td>'+d+'</td><td class="n">'+(DB.play[d]/60000).toFixed(1)+'</td></tr>').join('')+'</tbody></table></div>'
+    :'<p class="hint">還沒有遊玩時間。</p>';
+  p.innerHTML=
+    '<div class="ptop"><h2>家長設定</h2><button class="back" id="pBack">完成</button></div>'+
+    '<div class="psec"><h3>出現哪些字（至少 '+MIN_WORDS+' 個）</h3>'+groupsHtml+'<p class="note" id="pNote">'+(note||'')+'</p>'+
+      '<p class="hint">按音節切（第 1–4 級）：'+Object.keys(CHUNKS).map(w=>CHUNKS[w].join('·')).join('、')+'。</p>'+
+      '<p class="hint">一音一塊（第 5–6 級，只用規則拼法的字）：'+Object.keys(PHON).map(w=>PHON[w].join('·')).join('、')+'。</p></div>'+
+    '<div class="psec"><h3>聽音救援：一開始幾隻</h3>'+seg('startN',[[3,'3 隻'],[4,'4 隻'],[5,'5 隻']],s.startN)+
+      '<p class="hint">3 隻時會避開發音相近的組合，4 隻以上不避開。</p></div>'+
+    '<div class="psec"><h3>字母救援：從哪一關開始</h3>'+seg('spellStart',[[1,'1 兩塊'],[2,'2 兩塊・相近'],[3,'3 三塊'],[4,'4 只聽不看'],[5,'5 一音一塊'],[6,'6 一音一塊・只聽'],[7,'7 全拼'],[8,'8 全拼・只聽'],[0,'退路：找開頭']],s.spellStart)+
+      '<p class="hint">第 7、8 級：不給候選，用遊戲裡的字母鍵盤自己拼出整個字；第 7 級只出 5 個字母以內的字，第 8 級全部的字、不給圖片。同一個字母按錯兩次，正確的鍵會亮起來提示。點掉下來的方塊可以再聽一次。</p>'+
+      '<p class="hint">第 1–6 級：每一塊都由他自己選，一次掉一格的候選塊。連對 5 個字升一級；連續兩個字沒拼完降一級，最低到第 1 級。第 4、6 級不顯示圖片，拼完才出現。第 6 級會混入同音不同拼法的陷阱（ee/ea、c/k、er/ir）。「找開頭」只選第一塊，給卡住時用。</p></div>'+
+    '<div class="psec"><h3>字母救援：每格幾個候選</h3>'+seg('spellN',[[3,'3 個'],[4,'4 個'],[5,'5 個']],s.spellN)+'</div>'+
+    '<div class="psec"><h3>掉落速度</h3>'+seg('speed',[[1500,'很慢'],[1200,'慢'],[900,'中'],[650,'快']],s.speed)+'</div>'+
+    '<div class="psec"><h3>一局時間</h3>'+seg('minutes',[[2,'2 分鐘'],[3,'3 分鐘'],[5,'5 分鐘']],s.minutes)+'</div>'+
+    '<div class="psec"><h3>聽音救援：每隻動物的狀況</h3>'+table+'</div>'+
+    '<div class="psec"><h3>字母救援：各關狀況</h3>'+spellTable+hardHtml+'</div>'+
+    '<div class="psec"><h3>最近 7 天遊玩時間</h3>'+playHtml+'</div>'+
+    '<button class="danger" id="pReset">'+(resetArmed?'再點一次確定清除':'清除紀錄')+'</button>';
+  $('pBack').onclick=renderHome;
+  p.querySelectorAll('input[data-g]').forEach(cb=>cb.addEventListener('change',()=>{
+    const id=cb.dataset.g;
+    const next=cb.checked?[...new Set(DB.settings.groups.concat(id))]:DB.settings.groups.filter(x=>x!==id);
+    const count=ANIMALS.filter(a=>next.includes(a.g)).length;
+    if(count<MIN_WORDS){cb.checked=true;$('pNote').textContent='至少要留 '+MIN_WORDS+' 隻動物，遊戲才有得選。';return;}
+    DB.settings.groups=next; save(); $('pNote').textContent='';
+  }));
+  p.querySelectorAll('[data-set]').forEach(b=>b.addEventListener('click',()=>{
+    DB.settings[b.dataset.set]=Number(b.dataset.v); save(); renderParent();
+  }));
+  $('pReset').onclick=()=>{
+    if(!resetArmed){resetArmed=true;renderParent();setTimeout(()=>{if(resetArmed){resetArmed=false;if(!$('parent').hidden) renderParent();}},4000);return;}
+    resetArmed=false; DB.stats={}; DB.spell={}; DB.spellMiss={}; DB.play={}; save(); renderParent('紀錄已清除。');
+  };
+  show('parent');
+}
+
+/* ---------- wiring ---------- */
+$('startListen').addEventListener('click',()=>startGame('listen'));
+$('startSpell').addEventListener('click',()=>startGame('spell'));
+$('againBtn').addEventListener('click',()=>startGame());
+$('homeBtn').addEventListener('click',renderHome);
+$('parentBtn').addEventListener('click',()=>renderParent());
+$('pauseBtn').addEventListener('click',pause);
+$('resumeBtn').addEventListener('click',resume);
+$('quitBtn').addEventListener('click',()=>endRound('quit'));
+$('replayBtn').addEventListener('click',()=>{
+  if(!g||g.paused||!g.wave||g.wave.done) return;
+  g.speaking=true;
+  speak(g.wave.target,()=>{g.speaking=false;},g.mode==='spell'?0.6:0);
+});
+window.addEventListener('resize',layout);
+document.addEventListener('keydown',e=>{
+  if(e.metaKey||e.ctrlKey||e.altKey) return;
+  const ch=(e.key||'').toLowerCase();
+  if(/^[a-z]$/.test(ch)){e.preventDefault();onKey(ch);}
+});
+buildKbd();
+document.addEventListener('visibilitychange',()=>{if(document.hidden) pause();});
+
+renderHome();
+})();
+</script>
+
+</body></html>
