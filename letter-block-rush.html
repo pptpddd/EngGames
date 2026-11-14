@@ -269,6 +269,8 @@ const GROUPS = {
   share1:{name:"安親班 U1 家人", list:"parents 父母|uncle 叔叔、舅舅|aunt 阿姨、姑姑|cousin 堂表兄弟姊妹|grandparents 祖父母|glasses 眼鏡|keys 鑰匙|sandals 涼鞋|wallet 錢包"},
   share2:{name:"安親班 U2 食物", list:"mangoes 芒果|potatoes 馬鈴薯|peaches 桃子|carrots 紅蘿蔔|tomatoes 番茄|cucumbers 小黃瓜|avocados 酪梨|pasta 義大利麵|popcorn 爆米花|tea 茶|coffee 咖啡|soda 汽水|beef 牛肉|chicken 雞肉|lemonade 檸檬水"},
   hwg5:{name:"學校 Here We Go 5", list:"sixty 六十|seventy 七十|eighty 八十|ninety 九十|Sunday 星期日|Monday 星期一|Tuesday 星期二|Wednesday 星期三|Thursday 星期四|Friday 星期五|Saturday 星期六|art 美術|Chinese 國語|English 英語|math 數學|music 音樂|science 自然|bank 銀行|bookstore 書店|hospital 醫院|library 圖書館|museum 博物館|park 公園|supermarket 超市|lion 獅子|turtle 烏龜|koala 無尾熊|elephant 大象|horse 馬|monkey 猴子|tiger 老虎|zebra 斑馬"},
+  longu:{name:"長母音 u", list:"huge 巨大的|tube 管子|cube 方塊|mule 騾子|new 新的|few 很少的|glue 膠水|blue 藍色|but 但是"},
+  room:{name:"客廳", list:"sofa 沙發|table 桌子|balloons 氣球"},
   game:{name:"遊戲・怪獸・足球", list:"jump 跳|run 跑|shop 商店|play 玩|menu 選單|fire 火|tail 尾巴|king 國王|goal 球門|kick 踢|pass 傳球|ball 球|monster 怪獸|big 大的|win 贏"}
 };
 function parseList(s){
@@ -283,7 +285,7 @@ function parseList(s){
 const KEY="blockRush.v1.";
 function load(k,d){try{const v=localStorage.getItem(KEY+k);return v==null?d:JSON.parse(v);}catch(e){return d;}}
 function save(k,v){try{localStorage.setItem(KEY+k,JSON.stringify(v));}catch(e){}}
-const DEFAULTS={groups:{animals:true,body:true,clothes:true,colors:true,family:true,game:true,share1:true,share2:true,hwg5:true},custom:"",useCustom:false,secPerLetter:6,roundSize:10,kb:"abc"};
+const DEFAULTS={groups:{animals:true,body:true,clothes:true,colors:true,family:true,game:true,share1:true,share2:true,hwg5:true,longu:true,room:true},custom:"",useCustom:false,secPerLetter:6,roundSize:10,kb:"abc"};
 let settings=Object.assign({},DEFAULTS,load("settings",{}));
 settings.groups=Object.assign({},DEFAULTS.groups,settings.groups||{});
 if([4,6,8].indexOf(settings.secPerLetter)<0) settings.secPerLetter=6;

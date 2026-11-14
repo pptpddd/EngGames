@@ -281,7 +281,18 @@ const ANIMALS=[
   {w:'moon',zh:'月亮',e:'🌙',g:'sky'},
   {w:'star',zh:'星星',e:'⭐',g:'sky'},
   {w:'tree',zh:'樹',e:'🌳',g:'sky'},
-  {w:'flower',zh:'花',e:'🌸',g:'sky'}
+  {w:'flower',zh:'花',e:'🌸',g:'sky'},
+  {w:'tube',zh:'管子',e:'🧪',g:'longu'},
+  {w:'cube',zh:'方塊',e:'🧊',g:'longu'},
+  {w:'mule',zh:'騾子',e:'🫏',g:'longu'},
+  {w:'huge',zh:'巨大的',e:'巨大',g:'longu'},
+  {w:'new',zh:'新的',e:'🆕',g:'longu'},
+  {w:'few',zh:'很少的',e:'很少',g:'longu'},
+  {w:'glue',zh:'膠水',e:'🧴',g:'longu'},
+  {w:'blue',zh:'藍色',e:'🟦',g:'longu'},
+  {w:'but',zh:'但是',e:'但是',g:'longu'},
+  {w:'table',zh:'桌子',e:'桌子',g:'room'},
+  {w:'balloons',zh:'氣球',e:'🎈',g:'room'}
 ];
 const BY={}; ANIMALS.forEach(a=>BY[a.w]=a);
 const GROUPS=[
@@ -293,9 +304,11 @@ const GROUPS=[
   {id:'body',name:'身體組',hint:'可以邊玩邊指'},
   {id:'home',name:'家裡組',hint:'家裡、書包裡的東西'},
   {id:'toy',name:'玩具交通組',hint:'含足球 football、goal'},
-  {id:'sky',name:'戶外組',hint:'太陽、月亮、樹'}
+  {id:'sky',name:'戶外組',hint:'太陽、月亮、樹'},
+  {id:'longu',name:'長母音 u 組',hint:'u_e、ue、ew，配短音 but 對照'},
+  {id:'room',name:'客廳組',hint:'搭配家裡組的 sofa'}
 ];
-const NEW_GROUPS=['food','body','home','toy','sky'];
+const NEW_GROUPS=['food','body','home','toy','sky','longu','room'];
 /* phonics chunks: one-syllable words split onset + rime (word family), longer words split by syllable */
 const CHUNKS={
   crocodile:['croc','o','dile'], lizard:['liz','ard'], snake:['sn','ake'], spider:['spi','der'],
@@ -313,7 +326,9 @@ const CHUNKS={
   hat:['h','at'], shoe:['sh','oe'], sock:['s','ock'], shirt:['sh','irt'], car:['c','ar'], bus:['b','us'],
   bike:['b','ike'], train:['tr','ain'], boat:['b','oat'], plane:['pl','ane'], ball:['b','all'],
   kite:['k','ite'], robot:['ro','bot'], football:['foot','ball'], goal:['g','oal'], sun:['s','un'],
-  moon:['m','oon'], star:['st','ar'], tree:['tr','ee'], flower:['flow','er']
+  moon:['m','oon'], star:['st','ar'], tree:['tr','ee'], flower:['flow','er'],
+  tube:['t','ube'], cube:['c','ube'], mule:['m','ule'], huge:['h','uge'], new:['n','ew'], few:['f','ew'],
+  glue:['gl','ue'], blue:['bl','ue'], but:['b','ut'], table:['ta','ble'], balloons:['bal','loons']
 };
 /* one tile per sound (grapheme), only for words that follow regular phonics (no silent-e words) */
 const PHON={
@@ -325,11 +340,12 @@ const PHON={
   hand:['h','a','n','d'], leg:['l','e','g'], foot:['f','oo','t'], bed:['b','e','d'], book:['b','oo','k'], box:['b','o','x'],
   clock:['c','l','o','ck'], bag:['b','a','g'], hat:['h','a','t'], sock:['s','o','ck'], shirt:['sh','ir','t'],
   bus:['b','u','s'], robot:['r','o','b','o','t'], train:['t','r','ai','n'], boat:['b','oa','t'], goal:['g','oa','l'],
-  sun:['s','u','n'], moon:['m','oo','n'], star:['s','t','ar'], tree:['t','r','ee']
+  sun:['s','u','n'], moon:['m','oo','n'], star:['s','t','ar'], tree:['t','r','ee'],
+  new:['n','ew'], few:['f','ew'], glue:['g','l','ue'], blue:['b','l','ue'], but:['b','u','t']
 };
 /* same sound, different spelling: used as traps on the top level */
 const SOUND_ALT={ee:['ea'],ea:['ee'],c:['k'],k:['c','ck'],ck:['k'],ir:['er','ur'],er:['ir','ur'],oa:['ow'],ow:['oa'],
-  ai:['ay'],oo:['u'],ey:['y','ee'],gg:['g'],pp:['p'],rr:['r'],x:['ks'],z:['s'],f:['ph'],ar:['or']};
+  ai:['ay'],oo:['u'],ew:['ue'],ue:['ew'],ey:['y','ee'],gg:['g'],pp:['p'],rr:['r'],x:['ks'],z:['s'],f:['ph'],ar:['or']};
 const LEVEL_NAME={0:'找開頭',1:'兩塊',2:'兩塊・相近',3:'三塊',4:'只聽不看',5:'一音一塊',6:'一音一塊・只聽',7:'全拼',8:'全拼・只聽'};
 const LEVEL_SLOW={0:1.3,1:1.3,2:1.3,3:1.5,4:1.5,5:1.3,6:1.5,7:1.6,8:1.8};
 const MAX_LEVEL=8;
@@ -351,7 +367,9 @@ let DB={};
 try{DB=JSON.parse(localStorage.getItem(KEY))||{};}catch(e){DB={};}
 DB.settings=Object.assign({groups:['zoo','monster'].concat(NEW_GROUPS),speed:1200,minutes:3,startN:3,spellStart:1,spellN:3},DB.settings||{});
 /* v3 added new word groups: switch them on once for existing players */
-if(DB.wordsVer!==3){DB.settings.groups=[...new Set(DB.settings.groups.concat(NEW_GROUPS))];DB.wordsVer=3;}
+if(!DB.wordsVer||DB.wordsVer<3){DB.settings.groups=[...new Set(DB.settings.groups.concat(NEW_GROUPS))];DB.wordsVer=3;}
+/* v4: long-u and living-room groups */
+if(DB.wordsVer<4){DB.settings.groups=[...new Set(DB.settings.groups.concat(['longu','room']))];DB.wordsVer=4;}
 DB.stats=DB.stats||{};
 DB.spell=DB.spell||{};
 DB.spellMiss=DB.spellMiss||{};
@@ -421,7 +439,9 @@ function makeTile(label,isLetter){
   const el=document.createElement('div');
   el.className='tile';
   const fs={1:.56,2:.46,3:.38,4:.31,5:.26}[label.length]||.24;
-  el.innerHTML='<div class="em'+(isLetter?' letter':'')+'"'+(isLetter?' style="font-size:calc(var(--cell) * '+fs+')"':'')+'>'+label+'</div>';
+  const cjk=!isLetter&&/[\u4e00-\u9fff]/.test(label);
+  const sty=isLetter?' style="font-size:calc(var(--cell) * '+fs+')"':(cjk?' style="font-size:calc(var(--cell) * '+(label.length>2?.24:.32)+');font-weight:800"':'');
+  el.innerHTML='<div class="em'+(isLetter?' letter':'')+'"'+sty+'>'+label+'</div>';
   el.addEventListener('pointerdown',e=>{e.preventDefault();onTap(el);});
   return el;
 }
@@ -498,7 +518,9 @@ function pickTarget(pool){
   return rand(c);
 }
 function pickOthers(pool,target,k){
-  let c=shuffle(pool.filter(w=>w!==target));
+  /* never show two tiles with the same picture (mule and donkey share one) */
+  const seenE=new Set([BY[target].e]);
+  let c=shuffle(pool.filter(w=>w!==target)).filter(w=>{if(seenE.has(BY[w].e)) return false; seenE.add(BY[w].e); return true;});
   if(g.n<=3){
     const f=c.filter(w=>!(CONF[target]||[]).includes(w)&&!(CONF[w]||[]).includes(target));
     if(f.length>=k) c=f;
